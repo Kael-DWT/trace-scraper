@@ -1,4 +1,4 @@
-"""学习 Agent（F003 自动学习 + F006 自修复）。
+"""学习 Agent (自动学习 + 自修复）。
 
 按照 AGENT_PROMPT.md 的职责划分，本模块只负责「学习网站如何查询」，
 即生成可复用的导航规则（搜索输入框、查询按钮、是否需要详情页、结果容器）。
@@ -118,8 +118,6 @@ class LearningAgent:
             return None
 
         rule = _parse_rule(raw)
-        result = "success" if (rule and _validate_rule(rule)) else "failed"
-        
         if rule and _validate_rule(rule):
             rule.setdefault("domain", domain)
             logger.info("learned rule for %s confidence=%.2f", domain, rule.get("confidence", 0))
@@ -155,17 +153,6 @@ class LearningAgent:
         return {k: str(v).strip() for k, v in obj.items()
                 if k in STANDARD_FIELDS and v}
 
-    def _log(self, domain: str, agent_input: str, agent_output: str, result: str) -> None:
-        try:
-            with get_session() as s:
-                s.add(TraceLearningLog(
-                    domain=domain,
-                    agent_input=agent_input[:5000],
-                    agent_output=agent_output[:5000],
-                    result=result,
-                ))
-        except Exception:  # noqa: BLE001
-            logger.debug("learning log failed", exc_info=True)
     def learn_navigation(self, url: str, html: str) -> dict[str, Any] | None:
         """按 AGENT_PROMPT.md 学习站点的导航规则。
         LLM 只分析页面结构，不提取业务字段。返回规则 dict 或 None。
