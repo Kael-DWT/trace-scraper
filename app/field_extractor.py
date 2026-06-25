@@ -92,6 +92,10 @@ def extract_from_label(container: Tag) -> dict[str, str]:
     """<span>标签</span><strong>值</strong> 这类兄弟节点结构。"""
     out: dict[str, str] = {}
     for li in container.find_all("li"):
+        spans = li.find_all("span")
+        if len(spans) >= 2:
+            _set_if_known(out, spans[0].get_text(), spans[1].get_text())
+            continue
         sp = li.find("span")
         st = li.find("strong") or li.find("b")
         if sp and st:
