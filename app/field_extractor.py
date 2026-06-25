@@ -38,6 +38,11 @@ def _set_if_known(out: dict[str, str], raw_key: str, raw_val: str) -> None:
     val = _clean(raw_val)
     if not val:
         return
+    # Skip clearly non-label keys (protocols, URLs, etc.)
+    skip_keys = {"http", "https", "ftp", "file"}
+    rk_clean = _clean(raw_key).lower()
+    if rk_clean in skip_keys or rk_clean.startswith("//"):
+        return
     if key and key in out and out[key]:
         return  # 不覆盖已存在值
     if key:
@@ -133,6 +138,40 @@ def extract_from_div(container):
     return out
 
 
+
+def extract_from_sibling_divs(container: Tag) -> dict[str, str]:
+    """Handle sibling label+value div pattern: <div class="info-item"><div class="info-label">\u6807\u7b7e</div><div class="info-value">\u503c</div></div>
+    
+    Also handles <div class="field"><span class="label">\u6807\u7b7e</span><span class="value">\u503c</span></div>
+    and similar key-value card patterns with distinct label/value wrappers.
+    """
+    out: dict[str, str] = {}
+    # Class patterns for label and value wrappers
+    label_classes = ["label", "info-label", "field-label", "item-label", "key", "title", "name"]
+    value_classes = ["value", "info-value", "field-value", "item-value", "content", "desc", "val"]
+    
+    for parent in container.find_all(["div", "li", "span"], recursive=True):
+        children = parent.find_all(["div", "span"], recursive=False)
+        if len(children) < 2:
+            continue
+        # Look for one child with a label class and another with a value class
+        label_child = None
+        value_child = None
+        for child in children:
+            cls = " ".join(child.get("class", []))
+            if not label_child and any(lc in cls for lc in label_classes):
+                label_child = child
+            elif not value_child and any(vc in cls for vc in value_classes):
+                value_child = child
+        if label_child and value_child:
+            label_text = _clean(label_child.get_text())
+            value_text = _clean(value_child.get_text())
+            if label_text and value_text and len(label_text) <= 20 and len(value_text) <= 3000:
+                _set_if_known(out, label_text, value_text)
+    
+    return out
+
+
 def extract_fields(html: str, final_url: str = "") -> dict[str, str]:
     """主入口：按优先级尝试多种结构，合并结果。返回标准字段字典。"""
     soup = BeautifulSoup(html, "lxml")
@@ -151,6 +190,10 @@ def extract_fields(html: str, final_url: str = "") -> dict[str, str]:
         for k, v in li_res.items():
             out.setdefault(k, v)
     div_res = extract_from_div(container)
+    sibling_res = extract_from_sibling_divs(container)
+    if sibling_res:
+        for k, v in sibling_res.items():
+            out.setdefault(k, v)
     if div_res:
         for k, v in div_res.items():
             out.setdefault(k, v)

@@ -1,0 +1,71 @@
+
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="initial-scale=1.0, user-scalable=0">
+<meta name="format-detection" content="telephone=no, email=no, adress=no">
+<title>种子标签二维码追溯系统</title>
+<link href="style.css" rel="stylesheet" type="text/css">
+<script type="text/javascript">
+var info=[['9A0B89AF38617061','结球生菜','河北拖车头农业科技有限公司'],['纯度不低于','95.0%','净度不低于','98.0%','芽率不低于','80%','水份不高于','7.0%','净含量','见封口','作物种类','莴  苣','种子类别','常规大田用种','检测日期','见封口','质量保证期','12个月'],['品种主要性状','更新中……','主要栽培措施','更新中……','风险提示','该品种适合农家小院及房前屋后种植，不宜大面积推广种植。各地气候环境条件不同，未种植过的地区，应在试种后，按照本地实际情况合理安排种植及推广。因气候、病虫害、栽培管理等原因造成损失，不负经济责任。'],['农作物种子生产<br>经营许可证编号','BD(冀)农种许字(2023)第0012号','地址','河北省沧州市青县流河镇交通道路管理站西300米路北','全国统一咨询电话','400-687-6920'],[]];
+function showInfo(){
+	var t=document.getElementById('infoList');l=4;
+	t.rows[0].cells[0].innerHTML='品种标识';
+	t.deleteRow(l);
+	t.insertRow(l++).innerHTML='<th colspan="2" class="title">品种信息</th>';
+	for(var i=0;i<info[1].length;i+=2)t.insertRow(l++).innerHTML='<th>'+info[1][i]+'</th><td>'+info[1][i+1]+'</td>';
+	if(info[2].length){
+		t.insertRow(l++).innerHTML='<th colspan="2" class="title">栽培信息</th>';
+		for(i=0;i<info[2].length;i+=2)t.insertRow(l++).innerHTML='<th>'+info[2][i]+'</th><td>'+info[2][i+1]+'</td>';
+	}
+	t.insertRow(l++).innerHTML='<th colspan="2" class="title">生产经营者信息</th>';
+	t.insertRow(l++).innerHTML='<th>生产经营者名称</th><td>'+info[0][2]+'</td>';
+	if(info[3].length)for(i=0;i<info[3].length;i+=2){
+		if(/^http[s]?:\/\//.test(info[3][i+1])){
+			t.insertRow(l++).innerHTML='<th>'+info[3][i]+'</th><td><a href="'+info[3][i+1]+'" target="_blank">'+info[3][i+1]+'</a></td>';
+		}else{
+			t.insertRow(l++).innerHTML='<th>'+info[3][i]+'</th><td>'+info[3][i+1]+'</td>';
+		}
+	}
+	if(info[4].length){
+		t.insertRow(l++).innerHTML='<th colspan="2" class="title">流通信息</th>';
+		for(i=0;i<info[4].length;i+=2)t.insertRow(l++).innerHTML='<th>'+info[4][i]+'</th><td>'+info[4][i+1]+'</td>';
+	}
+}
+function init(){
+	if(!info.length){
+		document.getElementById('info').innerHTML='<p>种子信息不存在</p>';
+		return;
+	}
+	var t=document.getElementById('infoList');
+	t.rows[1].cells[1].innerHTML=info[0][1],t.rows[2].cells[1].innerHTML=info[0][2],t.rows[3].cells[1].innerHTML=info[0][0],t.rows[4].cells[1].firstChild.innerHTML+=info[0][0];
+	document.body.addEventListener('touchstart',function(){});
+}
+</script>
+</head>
+<body>
+<h1>种子标签二维码追溯系统</h1>
+<div id="info">
+
+<table id="infoList">
+	<tr>
+		<td class="title" colspan="2">追溯信息</td>
+	</tr>
+	<tr>
+		<th>品种名称</th><td></td>
+	</tr>
+	<tr>
+		<th>生产经营者名称</th><td></td>
+	</tr>
+	<tr>
+		<th>单元识别代码</th><td></td>
+	</tr>
+	<tr>
+		<th>追溯网址</th><td><span onclick="showInfo()">http://qr.zzxxcx.com/</span></td>
+	</tr>
+</table>
+
+</div><script type="text/javascript">init();</script>
+</body>
+</html>

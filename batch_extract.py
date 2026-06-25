@@ -121,6 +121,11 @@ def _context_text(a) -> str:
 
 def find_detail_url(html: str, base_url: str) -> str | None:
     """从摘要页找出详情页链接。优先匹配文本关键词，其次匹配 href 关键词。"""
+    # Pass 0: try to find a trace-website URL from table content
+    trace_url = _find_trace_url_in_content(html, base_url)
+    if trace_url:
+        return trace_url
+
     soup = BeautifulSoup(html, "lxml")
     links = []
     for a in soup.find_all("a", href=True):
@@ -265,12 +270,113 @@ async def run(limit: int = 0):
 
                 extract_html = html
                 extract_url = final_url
+
+                # First, try keyword detail buttons/links on the current page (more reliable)
+                _detail_keywords = ["查看产品详情", "产品详情", "品种详情", "详细信息", "查看详情", "查看产品", "详细"]
+                for _hop in range(3):
+                    _navigated = False
+                    for _kw in _detail_keywords:
+                        try:
+                            for _sel in [f'input[type=submit][value*="{_kw}"]', f'button:has-text("{_kw}")', f'a:has-text("{_kw}")']:
+                                _btn = await page.query_selector(_sel)
+                                if _btn and await _btn.is_visible():
+                                    await _btn.click()
+                                    await page.wait_for_timeout(3000)
+                                    try:
+                                        await page.wait_for_load_state("networkidle", timeout=8000)
+                                    except:
+                                        pass
+                                    _navigated = True
+                                    extract_html = await page.content()
+                                    extract_url = page.url
+                                    break
+                        except Exception:
+                            continue
+                        if _navigated:
+                            break
+                    if not _navigated:
+                        break
+
+                # Then try fallback URL discovery (for 追溯网址 links to real detail pages)
                 if detail_url:
                     dhtml, dfinal, dstatus = await fetch_page(page, detail_url)
-                    if dhtml:
+                    if dhtml and len(dhtml) > len(extract_html):
                         extract_html = dhtml
                         extract_url = dfinal
                         rec["status"] = dstatus
+
+                # Multi-hop: continue clicking detail buttons on subsequent pages
+                # (e.g. "查看产品详情" ASP.NET postback buttons)
+                _detail_keywords = ["查看产品详情", "产品详情", "品种详情", "详细信息", "查看详情", "查看产品", "详细"]
+                for _hop in range(3):
+                    _navigated = False
+                    for _kw in _detail_keywords:
+                        try:
+                            for _sel in [f'input[type=submit][value*="{_kw}"]', f"button:has-text('{_kw}')", f"a:has-text('{_kw}')"]:
+                                _btn = await page.query_selector(_sel)
+                                if _btn and await _btn.is_visible():
+                                    await _btn.click()
+                                    await page.wait_for_timeout(3000)
+                                    try:
+                                        await page.wait_for_load_state("networkidle", timeout=8000)
+                                    except:
+                                        pass
+                                    _navigated = True
+                                    break
+                        except Exception:
+                            continue
+                        if _navigated:
+                            break
+                    if not _navigated:
+                        break
+                    # Refresh HTML after navigation
+                    extract_html = await page.content()
+                    extract_url = page.url
+
+                # In-page reveal: trigger onclick toggles that render hidden data via JS
+                # (e.g. <span onclick="showInfo()">\u8ffd\u6eaf\u7f51\u5740</span>)
+                try:
+                    reveal_els = page.query_selector_all("[onclick]:not(button[type=submit])")
+                    for _el in reveal_els:
+                        try:
+                            _h = (_el.get_attribute("onclick") or "").strip().lower()
+                            if _h and "location" not in _h and "href" not in _h and "window.open" not in _h:
+                                if _el.is_visible():
+                                    _el.click()
+                                    await page.wait_for_timeout(600)
+                                    try:
+                                        await page.wait_for_load_state("networkidle", timeout=3000)
+                                    except:
+                                        pass
+                        except Exception:
+                            continue
+                    await page.wait_for_timeout(400)
+                    dhtml = await page.content()
+                    if dhtml and len(dhtml) > len(extract_html):
+                        extract_html = dhtml
+                except Exception:
+                    pass
+
+                # Capture initial fields before clicking tabs (tabs replace content)
+                _initial_fields_batch = {k: v for k, v in struct_fields.items()}
+
+                # Click each tab, extract, and merge fields
+                _tab_fields_batch = {}
+                for _tt in ["产品信息", "企业信息", "详细信息", "品种信息", "生产经营者信息", "生产信息", "追溯信息"]:
+                    try:
+                        _tel = await page.query_selector(f"text={_tt}")
+                        if _tel and await _tel.is_visible():
+                            await _tel.click()
+                            await page.wait_for_timeout(1500)
+                            try: await page.wait_for_load_state("networkidle", timeout=3000)
+                            except: pass
+                            _th = await page.content()
+                            _tf = extract_fields(_th, extract_url)
+                            for _tk, _tv in _tf.items():
+                                if _tk in STANDARD_FIELDS and _tv and _tk not in _tab_fields_batch:
+                                    _tab_fields_batch[_tk] = _tv
+                    except Exception:
+                        pass
 
                 struct_fields = struct_extract(extract_html, extract_url)
                 struct_fields.pop("trace_website", None)
@@ -283,6 +389,12 @@ async def run(limit: int = 0):
                     llm_fields = llm_extract(extract_html, extract_url)
 
                 merged = dict(struct_fields)
+                for _tk, _tv in _initial_fields_batch.items():
+                    if _tv and not merged.get(_tk):
+                        merged[_tk] = _tv
+                for _tk, _tv in _tab_fields_batch.items():
+                    if _tv and not merged.get(_tk):
+                        merged[_tk] = _tv
                 for k, v in llm_fields.items():
                     if k in STANDARD_FIELDS and v and not merged.get(k):
                         merged[k] = v
@@ -354,3 +466,45 @@ def _print_summary(results: list[dict]) -> None:
 if __name__ == "__main__":
     lim = int(sys.argv[sys.argv.index("--limit") + 1]) if "--limit" in sys.argv else 0
     asyncio.run(run(lim))
+def _find_trace_url_in_content(html: str, base_url: str) -> str | None:
+    """Search page for a trace-website label followed by a URL in an adjacent cell."""
+    from bs4 import BeautifulSoup
+    from urllib.parse import urljoin
+    soup = BeautifulSoup(html, "lxml")
+    trace_labels = ["\u8ffd\u6eaf\u7f51\u5740", "\u8ffd\u6eaf\u7f51\u7ad9", "\u8ffd\u6eaf\u5730\u5740", "\u6e90\u6eaf\u7f51\u5740", "\u6e90\u6eaf\u5730\u5740"]
+    for label_text in trace_labels:
+        for th in soup.find_all(["th", "td"]):
+            if label_text not in (th.get_text(strip=True) or ""):
+                continue
+            td = th.find_next_sibling("td")
+            if td:
+                a = td.find("a", href=True)
+                if a:
+                    href = a["href"].strip()
+                    resolved = urljoin(base_url, href)
+                    if not _is_homepage_link(href, base_url) and not resolved == base_url.rstrip("/"):
+                        return resolved
+                txt = td.get_text(strip=True)
+                if txt.startswith(("http://", "https://")):
+                    resolved = urljoin(base_url, txt)
+                    if not resolved == base_url.rstrip("/"):
+                        return resolved
+            parent_tr = th.find_parent("tr")
+            if parent_tr:
+                cells = parent_tr.find_all(["th", "td"])
+                for cell in cells:
+                    if cell is th:
+                        continue
+                    a = cell.find("a", href=True)
+                    if a:
+                        href = a["href"].strip()
+                        resolved = urljoin(base_url, href)
+                        if not _is_homepage_link(href, base_url) and not resolved == base_url.rstrip("/"):
+                            return resolved
+                    txt = cell.get_text(strip=True)
+                    if txt.startswith(("http://", "https://")):
+                        resolved = urljoin(base_url, txt)
+                        if not resolved == base_url.rstrip("/"):
+                            return resolved
+    return None
+
