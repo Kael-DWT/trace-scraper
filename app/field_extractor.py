@@ -128,7 +128,7 @@ def extract_from_div(container):
             else:
                 continue
             k, v = k.strip(), v.strip()
-            if len(k) <= 12 and len(v) <= 200 and k and v:
+            if len(k) <= 12 and len(v) <= 3000 and k and v:
                 _set_if_known(out, k, v)
     return out
 

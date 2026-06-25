@@ -233,7 +233,9 @@ class RuleEngine:
                 except Exception:
                     pass
 
+            _main_html = page.content()
             final_html = page.content()
+            _pre_fields = extract_fields(_main_html, page.url)
             # Search raw HTML for detail page links
             _dq = chr(34)
             _sq = chr(39)
@@ -267,6 +269,10 @@ class RuleEngine:
             ctx.close()
 
         fields = extract_fields(final_html, final_url)
+        # Merge pre-navigation fields
+        for _k, _v in _pre_fields.items():
+            if _k in STANDARD_FIELDS and _v and not fields.get(_k):
+                fields[_k] = _v
         fields.pop("trace_website", None)
         fields = {k: v for k, v in fields.items() if v}
         if not fields.get("goods_name") or not fields.get("company_name"):
