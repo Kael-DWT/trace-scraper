@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 from app.cache import get_cached, set_cached
-from app.config import BROWSER_HEADLESS, NAV_TIMEOUT_MS
+from app.config import BROWSER_HEADLESS, NAV_TIMEOUT_MS, STANDARD_FIELDS
 from app.field_extractor import extract_fields
 from app.learning_agent import LearningAgent
 from app.rule_store import get_rule, set_rule
