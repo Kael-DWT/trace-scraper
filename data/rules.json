@@ -1,0 +1,614 @@
+{
+  "ma.inb123.com": {
+    "domain": "ma.inb123.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "article .show ul"
+    },
+    "confidence": 1.0,
+    "updated_at": 1782354469.2976522
+  },
+  "seed-china.com": {
+    "domain": "seed-china.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "#LinkUrl"
+    },
+    "result": {
+      "container_selector": ".main"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782354581.6541042
+  },
+  "zsq.vegnet.cn": {
+    "domain": "zsq.vegnet.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "table.tab1.tabon a[href^='http://zsq.vegnet.cn/trace_view-']"
+    },
+    "result": {
+      "container_selector": "table.tab1.tabon"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782354595.8209646
+  },
+  "www.tesu123.com": {
+    "domain": "www.tesu123.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[href^='T2.aspx?Guid=']"
+    },
+    "result": {
+      "container_selector": ".tracetable"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782354622.025323
+  },
+  "l.htw360.cn": {
+    "domain": "l.htw360.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[href^='/details?codeName=']"
+    },
+    "result": {
+      "container_selector": ".box.marT10.list:nth-of-type(2) ul"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782354853.248701
+  },
+  "lg6m.cn": {
+    "domain": "znfw.lg6m.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "div[data-v-281af758=\"\"] .trace-info"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782356679.8959563
+  },
+  "365nyw.cn": {
+    "domain": "365nyw.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[href^=\"Product/\"]"
+    },
+    "result": {
+      "container_selector": ".smllkuang"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782357583.9473994
+  },
+  "er.pinet.cn": {
+    "domain": "er.pinet.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": ".tab1"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782357732.4493113
+  },
+  "www.seedqrcode.com": {
+    "domain": "www.seedqrcode.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "table"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782358204.4224286
+  },
+  "ystts.cn": {
+    "domain": "ystts.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "body"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782367321.4654684
+  },
+  "365sn.cn": {
+    "domain": "www.365sn.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[href*=\"/Seed/Index/product/scanCode/\"]"
+    },
+    "result": {
+      "container_selector": ".seed_content"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782369324.0465326
+  },
+  "www.365sn.cn": {
+    "domain": "www.365sn.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[href*='/Seed/Index/product/scanCode/']"
+    },
+    "result": {
+      "container_selector": ".seed_content"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782369493.380581
+  },
+  "qr61.cn": {
+    "domain": "qr61.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[href^='https://qr61.cn/okss3r/q2UnM9e']"
+    },
+    "result": {
+      "container_selector": "section.stylelib-list-item"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782369876.3564644
+  },
+  "njseed.com": {
+    "domain": "er.pinet.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "table.tab1"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782370608.4426794
+  },
+  "seed.nzsuyuan.net": {
+    "domain": "seed.nzsuyuan.net",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "div.panel-primary"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782370719.6073072
+  },
+  "www.wngkzs.com": {
+    "domain": "www.wngkzs.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "body"
+    },
+    "confidence": 0.9,
+    "updated_at": 1782370824.623215
+  },
+  "www.inb123.com": {
+    "domain": "ma.inb123.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "article .show ul"
+    },
+    "confidence": 1.0,
+    "updated_at": 1782371363.594984
+  },
+  "qr.zzxxcx.com": {
+    "domain": "qr.zzxxcx.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "#infoList"
+    },
+    "confidence": 1.0,
+    "updated_at": 1782371392.0671332
+  },
+  "tczs.bftc.cn": {
+    "domain": "tczs.bftc.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "#LinkUrl"
+    },
+    "result": {
+      "container_selector": ".main"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782373115.663084
+  },
+  "www.ltbz.com.cn": {
+    "domain": "www.ltbz.com.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "body"
+    },
+    "confidence": 0.9,
+    "updated_at": 1782373146.8243515
+  },
+  "qr17.cn": {
+    "domain": "active.clewm.net",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": ".type_content_des"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782373159.2398062
+  },
+  "www.maizhongzi.cn": {
+    "domain": "www.maizhongzi.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": ".product-info"
+    },
+    "confidence": 1.0,
+    "updated_at": 1782373602.2552104
+  },
+  "trace.zlf168.com": {
+    "domain": "trace.zlf168.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "body"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782374276.2107909
+  },
+  "www.zzsy123.com": {
+    "domain": "www.zzsy123.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "ul.mui-table-view li.mui-table-view-cell label a[href^='http://www.zzsy123.com/ts/dtinfo.php']"
+    },
+    "result": {
+      "container_selector": "#num.mui-card"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782374345.1997952
+  },
+  "www.hy315.cc": {
+    "domain": "www.hy315.cc",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "table"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782374423.9336874
+  },
+  "nzyzs.com": {
+    "domain": "nzyzs.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[data-click=\"detial_click\"]"
+    },
+    "result": {
+      "container_selector": "#moduleWrapper"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782377176.3860233
+  },
+  "www.tzczhuisu.com": {
+    "domain": "www.tzczhuisu.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "#originUrl"
+    },
+    "result": {
+      "container_selector": ".code-info.pro-Info"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782377781.6757295
+  },
+  "zs.juyouwei.com.cn": {
+    "domain": "zs.juyouwei.com.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "body"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782377804.1468737
+  },
+  "zs.zzewm.cn": {
+    "domain": "zs.zzewm.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": ".btninifo a"
+    },
+    "result": {
+      "container_selector": ".content"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782377837.786011
+  },
+  "it.scggic.com": {
+    "domain": "it.scggic.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": ".detailInfo"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782377856.8990057
+  },
+  "www.scggic.com": {
+    "domain": "www.scggic.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "body"
+    },
+    "confidence": 0.9,
+    "updated_at": 1782378089.476972
+  },
+  "sy.nongkeyu.com": {
+    "domain": "sy.nongkeyu.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[href*='qrcode.html?code=']"
+    },
+    "result": {
+      "container_selector": "section[id^='section']"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782378348.36539
+  },
+  "315ys.cn": {
+    "domain": "ystts.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": "body"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782378628.969312
+  },
+  "www.xjseed.cn": {
+    "domain": "www.xjseed.cn",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "ul li:nth-child(4) span.font a"
+    },
+    "result": {
+      "container_selector": ".box ul"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782378908.510457
+  },
+  "qr34.cn": {
+    "domain": "active.clewm.net",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": false,
+      "detail_selector": ""
+    },
+    "result": {
+      "container_selector": ".type_content_des"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782378938.056898
+  },
+  "jxnw.taifengxinshi.com": {
+    "domain": "jxnw.taifengxinshi.com",
+    "search": {
+      "input_selector": "",
+      "button_selector": "",
+      "input_type": "text"
+    },
+    "navigation": {
+      "need_detail_page": true,
+      "detail_selector": "a[href^='http://jxnw.taifengxinshi.com/b.asp']"
+    },
+    "result": {
+      "container_selector": "table"
+    },
+    "confidence": 0.95,
+    "updated_at": 1782378956.335987
+  }
+}
