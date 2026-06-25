@@ -166,3 +166,49 @@ class LearningAgent:
                 ))
         except Exception:  # noqa: BLE001
             logger.debug("learning log failed", exc_info=True)
+    def learn_navigation(self, url: str, html: str) -> dict[str, Any] | None:
+        """按 AGENT_PROMPT.md 学习站点的导航规则。
+        LLM 只分析页面结构，不提取业务字段。返回规则 dict 或 None。
+        """
+        from urllib.parse import urlparse
+        domain = urlparse(url).netloc.lower()
+        stripped = _strip_html(html, limit=30000)
+        system = (
+            "You are an expert website analysis agent.\n"
+            "Your task is to learn how a traceability website works and generate reusable navigation rules.\n"
+            "You are NOT responsible for extracting business fields.\n"
+            "Your responsibility is only:\n"
+            "1. Find query input\n2. Find query button\n"
+            "3. Determine whether detail page is required\n"
+            "4. Find detail page entry\n5. Identify result container\n"
+            "6. Generate navigation rules\n\n"
+            "The generated rules must be reusable. Never use temporary IDs.\n"
+            "Prefer stable selectors.\n\n"
+            "IMPORTANT: Many traceability sites render the product info directly on the "
+            "QR code URL page (no search form needed). For those sites, set input_selector "
+            "and button_selector to empty strings, need_detail_page to true if there is a "
+            "'详情' or detail link, and set detail_selector to the CSS selector for that link.\n"
+            "If the page IS the detail page (no further navigation needed), set need_detail_page to false.\n\n"
+            "Return ONLY valid JSON, no markdown, no explanations:\n"
+            '{"domain":"","search":{"input_selector":"","button_selector":"","input_type":"text"},'
+            '"navigation":{"need_detail_page":false,"detail_selector":""},'
+            '"result":{"container_selector":""},"confidence":0.0}'
+        )
+        user = (
+            f"Website URL: {url}\n"
+            f"Domain: {domain}\n"
+            f"HTML:\n{stripped}\n\n"
+            "Analyze this traceability page. Return the navigation rule JSON only."
+        )
+        try:
+            raw = _call_llm(system, user)
+        except Exception as exc:
+            logger.warning("learn_navigation LLM failed: %s", exc)
+            return None
+        rule = _parse_rule(raw)
+        if rule and _validate_rule(rule):
+            rule.setdefault("domain", domain)
+            logger.info("learned nav rule for %s conf=%.2f", domain, rule.get("confidence", 0))
+            return rule
+        logger.info("nav rule rejected for %s", domain)
+        return None

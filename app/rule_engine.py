@@ -1,6 +1,8 @@
-"""编排引擎：抓取 -> 找详情页 -> 结构提取 -> LLM兜底 -> 缓存。"""
+"""编排引擎：LLM 学习导航规则 → Playwright 按规则执行 → 结构提取 → 缓存。"""
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import html as _html
 import logging
 import re
@@ -9,24 +11,47 @@ from typing import Any
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 from app.cache import get_cached, set_cached
-from app.fetcher import fetch_page, FetchResult
+from app.config import BROWSER_HEADLESS, NAV_TIMEOUT_MS
 from app.field_extractor import extract_fields
 from app.learning_agent import LearningAgent
+from app.rule_store import get_rule, set_rule
 
 logger = logging.getLogger("trace.rule_engine")
 
-# ---- 详情页链接检测 ----
-DETAIL_TEXTS_PRIMARY = ["查看产品详情", "产品详情", "品种详情", "查看详情", "详细信息", "查看产品", "进入追溯"]
-DETAIL_TEXTS_SECONDARY = ["追溯网址"]
-DETAIL_KEYWORDS = ["description", "detail", "info", "trace", "getmsg", "product"]
+UA = "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
 
-def _context_text(a) -> str:
-    """收集 <a> 周围的标记文本（前驱兄弟、父级内的 span/label 等）。"""
-    parts = []
+def _trace_code_from_url(url: str) -> str:
+    parsed = urlparse(url)
+    for param in ("n", "id", "code", "c", "q", "Guid", "bianhao", "identity", "f", "ds", "215", "96", "7"):
+        val = _parse_qs(parsed.query).get(param, [""])[0]
+        if val:
+            return val
+    parts = [p for p in parsed.path.split("/") if p]
+    for p in reversed(parts):
+        if not p.startswith("index") and not p.startswith("seed"):
+            return p
+    return ""
+
+
+def _parse_qs(query: str) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    if not query:
+        return result
+    for pair in query.split("&"):
+        if "=" not in pair:
+            continue
+        k, v = pair.split("=", 1)
+        result.setdefault(k, []).append(v)
+    return result
+
+
+def _get_context_text(a) -> str:
     sib = a.previous_sibling
+    parts = []
     while sib:
         t = getattr(sib, "get_text", lambda: str(sib))() if hasattr(sib, "get_text") else str(sib)
         t = t.strip()
@@ -40,66 +65,47 @@ def _context_text(a) -> str:
         at = (a.get_text() or "").strip()
         if pt and at and pt != at:
             parts.append(pt)
+        gp = parent.parent
+        if gp:
+            gpt = gp.get_text(separator=" ", strip=True)
+            if gpt and gpt != pt:
+                parts.append(gpt)
     return " ".join(parts)
 
 
-def _is_homepage_link(href: str, base_url: str) -> bool:
-    """判断链接是否指向首页。"""
-    resolved = urljoin(base_url, href)
-    parsed = urlparse(resolved)
-    path = parsed.path.rstrip("/")
-    if not path or path in ("/index", "/index.html", "/home"):
-        return True
-    return False
+def _is_homepage(url: str) -> bool:
+    path = urlparse(url).path.rstrip("/")
+    return not path or path in ("/index", "/index.html", "/home", "")
 
 
-def find_detail_url(html: str, base_url: str) -> str | None:
-    """从摘要页 HTML 中找出详情页链接。"""
+def _find_detail_url_fallback(html: str, base_url: str) -> str | None:
     soup = BeautifulSoup(html, "lxml")
-    links = []
+    detail_texts = ["查看产品详情", "产品详情", "品种详情", "查看详情", "详细信息", "查看产品", "进入追溯", "追溯网址"]
+    keywords = ["description", "detail", "info", "trace", "getmsg", "product"]
     for a in soup.find_all("a", href=True):
         text = (a.get_text() or "").strip()
-        href = a["href"].strip()
-        ctx = _context_text(a)
+        ctx = _get_context_text(a)
         combined = f"{text} {ctx}"
-        links.append((a, text, href, combined))
-
-    # Pass 1: 文本匹配 "查看产品详情" / "产品详情"
-    for a, text, href, combined in links:
-        if any(kw in combined for kw in DETAIL_TEXTS_PRIMARY):
+        if any(kw in combined for kw in detail_texts):
+            href = a["href"].strip()
             if href.startswith("javascript:"):
                 m = re.search(r'["\']([^"\']*(?:description|detail|info)[^"\']*)["\']', href)
                 if m:
                     return urljoin(base_url, _html.unescape(m.group(1)))
             else:
-                return urljoin(base_url, _html.unescape(href))
-
-    # Pass 2: "追溯网址" 文本链接（排除首页）
-    for a, text, href, combined in links:
-        if any(kw in combined for kw in DETAIL_TEXTS_SECONDARY):
-            if not _is_homepage_link(href, base_url):
-                if href.startswith("javascript:"):
-                    m = re.search(r'["\']([^"\']*(?:description|detail|info)[^"\']*)["\']', href)
-                    if m:
-                        return urljoin(base_url, _html.unescape(m.group(1)))
-                else:
-                    return urljoin(base_url, _html.unescape(href))
-
-    # Pass 3: href 含 description/detail/product 等关键词
-    for a, text, href, combined in links:
-        if href.startswith("javascript:"):
-            continue
-        if any(kw in href.lower() for kw in ["description", "detail", "product"]):
-            return urljoin(base_url, _html.unescape(href))
-
-    # Pass 4: 其他 trace/getmsg/info 关键词
-    for a, text, href, combined in links:
-        if "javascript" not in href:
-            if any(kw in href.lower() for kw in ["trace", "getmsg", "info"]):
                 resolved = urljoin(base_url, _html.unescape(href))
-                if not _is_homepage_link(href, base_url):
+                if not _is_homepage(resolved):
                     return resolved
-
+        for kw in keywords:
+            hl = a.get("href", "").lower()
+            if kw in hl and "javascript" not in hl:
+                resolved = urljoin(base_url, _html.unescape(a["href"]))
+                if not _is_homepage(resolved):
+                    return resolved
+        if "javascript" in a.get("href", ""):
+            m = re.search(r'["\']([^"\']*(?:description|detail|info)[^"\']*)["\']', a["href"])
+            if m:
+                return urljoin(base_url, _html.unescape(m.group(1)))
     return None
 
 
@@ -110,53 +116,111 @@ def _domain_of(url: str) -> str:
 class RuleEngine:
     def __init__(self) -> None:
         self.agent = LearningAgent()
+        self._browser = None
+        self._pw = None
+
+    def init_browser(self):
+        if self._browser is None:
+            self._pw = sync_playwright().start()
+            self._browser = self._pw.chromium.launch(headless=BROWSER_HEADLESS)
+
+    def close_browser(self):
+        if self._browser:
+            self._browser.close()
+            self._browser = None
+        if self._pw:
+            self._pw.stop()
+            self._pw = None
 
     def query(self, url: str) -> dict[str, Any]:
         domain = _domain_of(url)
         t0 = time.time()
-
-        # 缓存命中
         cached = get_cached(domain, url)
         if cached is not None:
-            logger.info("cache hit domain=%s", domain)
             return {"source": "cache", "fields": cached, "elapsed_ms": round((time.time() - t0) * 1000)}
 
-        # 抓取摘要页
-        fetched = fetch_page(url)
-        if not fetched.ok:
-            raise RuntimeError(f"fetch failed: {fetched.error}")
+        rule = get_rule(domain)
+        if rule is None:
+            from app.fetcher import fetch_page
+            fetched = fetch_page(url)
+            if not fetched.ok:
+                raise RuntimeError(f"fetch failed: {fetched.error}")
+            rule = self.agent.learn_navigation(fetched.final_url or url, fetched.html)
+            if rule:
+                set_rule(domain, rule)
+            else:
+                rule = None
 
-        # 找详情页链接并抓取
-        ext_html = fetched.html
-        ext_url = fetched.final_url or url
-        detail_url = find_detail_url(ext_html, ext_url)
-        if detail_url:
-            logger.info("found detail page: %s", detail_url[:60])
-            detail_fetched = fetch_page(detail_url)
-            if detail_fetched.ok:
-                ext_html = detail_fetched.html
-                ext_url = detail_fetched.final_url or detail_url
+        if self._browser is None:
+            self.init_browser()
 
-        # 结构化提取
-        fields = extract_fields(ext_html, ext_url)
+        # Single Playwright session for full navigation
+        ctx = self._browser.new_context(user_agent=UA, viewport={"width": 414, "height": 896}, locale="zh-CN")
+        page = ctx.new_page()
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT_MS)
+            page.wait_for_timeout(1200)
+            try:
+                page.wait_for_load_state("networkidle", timeout=5000)
+            except PWTimeout:
+                pass
+
+            if rule and rule.get("search", {}).get("input_selector"):
+                tc = _trace_code_from_url(url)
+                try:
+                    page.fill(rule["search"]["input_selector"], tc)
+                    page.click(rule["search"]["button_selector"])
+                    page.wait_for_timeout(3000)
+                    try:
+                        page.wait_for_load_state("networkidle", timeout=8000)
+                    except PWTimeout:
+                        pass
+                except Exception as e:
+                    logger.warning("search fail: %s", e)
+
+            nav_ok = bool(rule and rule.get("navigation", {}).get("need_detail_page") and rule.get("navigation", {}).get("detail_selector"))
+            if nav_ok:
+                try:
+                    el = page.query_selector(rule["navigation"]["detail_selector"])
+                    if el:
+                        el.click()
+                        page.wait_for_timeout(3000)
+                        try:
+                            page.wait_for_load_state("networkidle", timeout=8000)
+                        except PWTimeout:
+                            pass
+                except Exception as e:
+                    logger.warning("detail click fail: %s", e)
+            else:
+                html_now = page.content()
+                durl = _find_detail_url_fallback(html_now, page.url)
+                if durl and durl != page.url:
+                    try:
+                        page.goto(durl, timeout=NAV_TIMEOUT_MS)
+                        page.wait_for_timeout(2000)
+                    except Exception as e:
+                        logger.warning("fallback nav fail: %s", e)
+
+            final_html = page.content()
+            final_url = page.url
+        except Exception as exc:
+            raise RuntimeError(f"nav failed: {exc}")
+        finally:
+            ctx.close()
+
+        fields = extract_fields(final_html, final_url)
         fields.pop("trace_website", None)
         fields = {k: v for k, v in fields.items() if v}
-
-        # LLM 兜底
         if not fields.get("goods_name") or not fields.get("company_name"):
-            logger.info("struct extraction incomplete, trying LLM fallback")
-            llm_fields = self.agent.extract_with_llm(ext_url, ext_html)
-            for k, v in llm_fields.items():
+            lf = self.agent.extract_with_llm(final_url, final_html)
+            for k, v in lf.items():
                 if v and not fields.get(k):
                     fields[k] = v
-
         fields["trace_website"] = url
         fields["domain"] = domain
-
-        # 缓存
         set_cached(domain, url, fields)
         elapsed = round((time.time() - t0) * 1000)
-        logger.info("done domain=%s fields=%d elapsed=%dms", domain, len(fields), elapsed)
+        logger.info("done %s fields=%d %dms", domain, len(fields), elapsed)
         return {"source": "live", "fields": fields, "elapsed_ms": elapsed}
 
 

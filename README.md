@@ -1,23 +1,25 @@
-# Trace Source Universal Extractor — 溯源数据通用提取平台
+﻿# Trace Source Universal Extractor — 溯源数据通用提取平台
 
 从农业种子二维码溯源网页中自动提取产品信息，输出标准化的 27 个字段。
 覆盖 46 个不同溯源网站，无需为每个网站单独编写爬虫。
 
 ## 架构
 
-Playwright(浏览器自动化) → 结构化提取(F004) → LLM 兜底(通义千问)
+```
+LLM 导航学习(首次) → 规则持久化 → Playwright 按规则导航
+  ↓
+单次浏览器会话: 填表单 → 点详情页 → 等待容器
+  ↓
+结构化提取(table / dl / label / div) → LLM 字段兜底
+  ↓
+27 字段输出 + goods_code(md5)
+```
 
-```
-用户扫码 → 获取 URL → 匹配规则 / 自动学习
-  ↓
-Playwright 抓取页面(移动端 UA, JS 渲染, 跳转处理)
-  ↓
-结构化提取(table / dl / label / div 四种结构)
-  ↓
-缺关键字段 ? LLM 兜底(通义千问 DashScope) : 跳过
-  ↓
-27 字段标准化输出 → 缓存 / 日志 / 保存
-```
+**关键设计:**
+- Playwright 浏览器常驻: FastAPI 启动时初始化，所有请求复用
+- 单次会话: 每次查询只启动一次浏览器上下文，完成全部导航（摘要页→表单→详情页）
+- LLM 只学导航规则（AGENT_PROMPT.md），不参与字段提取
+- 规则持久化到 data/rules.json，服务重启后复用
 
 ## 快速开始
 
@@ -30,98 +32,108 @@ playwright install chromium
 
 ### 2. 配置 API Key
 
-编辑 `.env` 文件，填入阿里百炼通义千问的 API Key：
-
+编辑 .env：
 ```
 DASHSCOPE_API_KEY=sk-xxxxx
 ```
+LLM 仅在首次访问域名时学习导航规则，结构化提取缺关键字段时兜底。
 
-LLM 仅在结构化提取缺 goods_name/company_name 时调用。
-
-### 3. 运行服务
+### 3. 启动服务
 
 ```bash
 python run.py
 ```
 
-API 服务启动在 `http://127.0.0.1:8000`
+API 运行在 http://127.0.0.1:8000
 
-#### 查询接口 (F001)
+### 4. 查询
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/query \
   -H "Content-Type: application/json" \
-  -d '{"url":"http://ma.inb123.com/d/40120","trace_code":"40120"}'
+  -d '{"url":"http://ma.inb123.com/d/40120"}'
 ```
 
-#### 查看规则 (F002)
-
-```bash
-curl http://127.0.0.1:8000/api/rules
+响应结构:
+```json
+{
+  "success": true,
+  "data": {
+    "source": "live",
+    "fields": {
+      "goods_code": "f452c411...",
+      "goods_name": "20gBM800甜玉米",
+      "trace_website": "http://ma.inb123.com/d/40120"
+    },
+    "elapsed_ms": 3500
+  }
+}
 ```
 
-#### 查看日志
+所有 27 个字段始终输出，缺失字段为空字符串。
 
-```bash
-curl http://127.0.0.1:8000/api/logs/query
-```
+## 性能
 
-### 4. 批量提取
+| 模式 | 耗时 | 说明 |
+|------|------|------|
+| 首次域名 | ~6s | LLM 学习导航规则 + 全流程提取 |
+| 后续同域名 | ~3.5s | 复用规则 + 共享浏览器，无 LLM |
+| 缓存命中 | <1ms | 同一 URL 24h 内重复查询 |
 
-```bash
-python batch_extract.py
-```
+## 输出字段（27个）
 
-对 `goods_qrcode_info.json` 中的 46 个域名去重后逐个提取，结果写入 SQLite 和 JSON。
-
-## 输出字段
-
-| 字段 | 说明 | 覆盖率 |
-|------|------|--------|
-| goods_code | md5(qrcode_url+goods_name+company_name) | 100% |
-| goods_name | 商品名称 | 100% |
-| company_name | 公司名称 | 100% |
-| crop_category | 作物类别 | ~50% |
-| unit_code | 单元识别代码 | ~62% |
-| germination_rate | 发芽率 | ~33% |
-| purity | 纯度 | ~36% |
-| cleanliness | 净度 | ~36% |
-| moisture | 水分 | ~33% |
-| seed_category | 种子类别 | ~46% |
-| license_number | 许可证编号 | ~41% |
-| warranty_period | 质量保证期 | ~38% |
-| mobile | 联系电话 | ~41% |
-| reg_address | 注册地址 | ~36% |
-| characteristics | 特征特性 | ~13% |
-| risk_warning | 风险提示 | ~13% |
-| cultivation_points | 栽培要点 | ~8% |
-| + 10 个更多字段 | (brand/origin/sale_area 等) | |
-
-trace_website 直接使用输入的 URL 地址。
+| 字段 | 说明 |
+|------|------|
+| goods_code | md5(qrcode_url + goods_name + company_name) |
+| goods_name | 商品名称 |
+| company_name | 公司名称（生产经营者名称） |
+| crop_category | 作物类别 |
+| mobile | 联系电话 |
+| reg_address | 注册地址 |
+| sale_area | 销售区域 |
+| unit_code | 单元识别代码 |
+| batch_number | 批次 |
+| brand | 品牌 |
+| query_count | 查询次数 |
+| germination_rate | 发芽率 |
+| purity | 纯度 |
+| cleanliness | 净度 |
+| moisture | 水分 |
+| seed_category | 种子类别 |
+| origin | 产地 |
+| test_date | 检测日期 |
+| warranty_period | 质量保证期 |
+| consult_service | 咨询服务信息 |
+| supplier | 供应商 |
+| characteristics | 特征特性 |
+| cultivation_points | 栽培要点 |
+| risk_warning | 风险提示 |
+| trace_website | 追溯网站（输入 URL） |
+| license_number | 许可证编号 |
+| planting_season | 种植季节 |
 
 ## 项目文件
 
 ```
 ./
-├── .env                 # API Key 配置
-├── AGENT_PROMPT.md      # LLM 学习 Agent 系统提示词
-├── PRD.md               # 产品需求文档
-├── goods_qrcode_info.json  # 溯源网址样本(463条,46域名)
-├── requirements.txt     # 依赖清单
-├── run.py               # FastAPI 服务启动入口
-├── batch_extract.py     # 批量提取入口
+├── .env                     # DASHSCOPE_API_KEY
+├── AGENT_PROMPT.md          # LLM 导航学习提示词
+├── PRD.md                   # 产品需求文档
+├── README.md                # 本文件
+├── goods_qrcode_info.json   # 463条样本数据
+├── requirements.txt         # Python 依赖
+├── run.py                   # FastAPI 启动入口
+├── batch_extract.py         # 批量提取脚本
 ├── app/
-│   ├── config.py        # 配置(路径/超时/LLM参数)
-│   ├── database.py      # SQLite 会话
-│   ├── models.py        # 数据模型(GoodsExtract/SiteRule/QueryLog)
-│   ├── fetcher.py       # Playwright 页面抓取
-│   ├── field_extractor.py  # 字段提取(Table/dl/label/div)
-│   ├── alias.py         # 字段别名映射(26字段×同义词)
-│   ├── learning_agent.py   # LLM 学习 Agent(F003)
-│   ├── cache.py         # 结果缓存(F005,24h TTL)
-│   ├── rule_engine.py   # 编排服务(抓取→学习→提取)
-│   └── main.py          # FastAPI 接口(F001/F002)
+│   ├── config.py            # 全局配置
+│   ├── fetcher.py           # 页面抓取（共享浏览器）
+│   ├── field_extractor.py   # 字段提取（4种结构）
+│   ├── alias.py             # 字段别名映射（26字段 x 同义词）
+│   ├── learning_agent.py    # LLM 导航学习 + 字段兜底
+│   ├── rule_store.py        # 导航规则持久化（JSON）
+│   ├── cache.py             # 结果缓存（内存，24h TTL）
+│   ├── rule_engine.py       # 编排：学规则→导航→提取→缓存
+│   └── main.py              # FastAPI 接口（F001）
 └── data/
-    ├── trace.db         # SQLite 数据库
-    └── batch_results.json  # 批量提取结果
+    └── rules.json            # 已学习的导航规则（自动生成）
 ```
