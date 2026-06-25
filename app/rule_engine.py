@@ -141,11 +141,23 @@ class RuleEngine:
 
         rule = get_rule(domain)
         if rule is None:
-            from app.fetcher import fetch_page
-            fetched = fetch_page(url)
-            if not fetched.ok:
-                raise RuntimeError(f"fetch failed: {fetched.error}")
-            rule = self.agent.learn_navigation(fetched.final_url or url, fetched.html)
+            if self._browser is None:
+                self.init_browser()
+            _bx = self._browser
+            _cx = _bx.new_context(user_agent=UA, viewport={"width":414,"height":896}, locale="zh-CN")
+            _pg = _cx.new_page()
+            try:
+                _pg.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT_MS)
+                _pg.wait_for_timeout(1200)
+                try: _pg.wait_for_load_state("networkidle", timeout=5000)
+                except: pass
+                _html = _pg.content()
+                _uf = _pg.url
+            except Exception as _e:
+                _cx.close()
+                raise RuntimeError(f"fetch failed: {_e}")
+            _cx.close()
+            rule = self.agent.learn_navigation(_uf, _html)
             if rule:
                 set_rule(domain, rule)
             else:
