@@ -248,6 +248,7 @@ class RuleEngine:
                 _en = final_html.find(_q, _st)
                 if _en <= _st: continue
                 _du = final_html[_st:_en].strip()
+                if _du.startswith("navLink:"): _du = _du[8:]
                 if not _du.startswith("http"):
                     from urllib.parse import urljoin as _uj
                     _du = _uj(str(page.url), _du)
