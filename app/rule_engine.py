@@ -237,7 +237,7 @@ class RuleEngine:
             # Search raw HTML for detail page links
             _dq = chr(34)
             _sq = chr(39)
-            for _kw in ["seedinfo.php", "description.aspx", "info.php", "getmsg.asp"]:
+            for _kw in ["seedinfo.php", "description.aspx", "info.php", "getmsg.asp", "qr61", "navLink:"]:
                 _pos = final_html.find(_kw)
                 if _pos < 0: continue
                 _st = final_html.rfind("href=" + _dq, max(0, _pos-300), _pos)
