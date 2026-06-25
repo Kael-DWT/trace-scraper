@@ -214,30 +214,6 @@ class RuleEngine:
                         logger.warning("fallback nav fail: %s", e)
 
 
-            # Search raw HTML for detail page links
-            _dq = chr(34)
-            _sq = chr(39)
-            for _kw in ["seedinfo.php", "description.aspx", "info.php", "getmsg.asp"]:
-                _pos = final_html.find(_kw)
-                if _pos < 0: continue
-                _st = final_html.rfind("href=" + _dq, max(0, _pos-300), _pos)
-                if _st < 0: _st = final_html.rfind("href=" + _sq, max(0, _pos-300), _pos)
-                if _st < 0: continue
-                _st += 6
-                _q = _dq if final_html[_st-1:_st+5].endswith(_dq) else _sq
-                _en = final_html.find(_q, _st)
-                if _en <= _st: continue
-                _du = final_html[_st:_en].strip()
-                if not _du.startswith("http"):
-                    from urllib.parse import urljoin as _uj
-                    _du = _uj(str(final_url), _du)
-                if not _du or _du == final_url: continue
-                try:
-                    page.goto(_du, timeout=NAV_TIMEOUT_MS)
-                    page.wait_for_timeout(2000)
-                except Exception as _ex:
-                    logger.warning("chr heuristic nav fail: %s", _ex)
-                break
 
             # Click each tab, extract, and merge fields
             _tab_fields = {}
@@ -258,6 +234,31 @@ class RuleEngine:
                     pass
 
             final_html = page.content()
+            # Search raw HTML for detail page links
+            _dq = chr(34)
+            _sq = chr(39)
+            for _kw in ["seedinfo.php", "description.aspx", "info.php", "getmsg.asp"]:
+                _pos = final_html.find(_kw)
+                if _pos < 0: continue
+                _st = final_html.rfind("href=" + _dq, max(0, _pos-300), _pos)
+                if _st < 0: _st = final_html.rfind("href=" + _sq, max(0, _pos-300), _pos)
+                if _st < 0: continue
+                _st += 6
+                _q = _dq if final_html[_st-1:_st+5].endswith(_dq) else _sq
+                _en = final_html.find(_q, _st)
+                if _en <= _st: continue
+                _du = final_html[_st:_en].strip()
+                if not _du.startswith("http"):
+                    from urllib.parse import urljoin as _uj
+                    _du = _uj(str(page.url), _du)
+                if not _du or _du == page.url: continue
+                try:
+                    page.goto(_du, timeout=NAV_TIMEOUT_MS)
+                    page.wait_for_timeout(2000)
+                    final_html = page.content()
+                except Exception as _ex:
+                    logger.warning("chr heuristic nav fail: %s", _ex)
+                break
             final_url = page.url
         except Exception as exc:
             raise RuntimeError(f"nav failed: {exc}")
