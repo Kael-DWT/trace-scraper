@@ -213,6 +213,24 @@ class RuleEngine:
                     except Exception as e:
                         logger.warning("fallback nav fail: %s", e)
 
+            # Click each tab, extract, and merge fields
+            _tab_fields = {}
+            for _tt in ["产品信息", "企业信息", "详细信息"]:
+                try:
+                    _tel = page.query_selector(f"text={_tt}")
+                    if _tel and _tel.is_visible():
+                        _tel.click()
+                        page.wait_for_timeout(1500)
+                        try: page.wait_for_load_state("networkidle", timeout=3000)
+                        except: pass
+                        _th = page.content()
+                        _tf = extract_fields(_th, page.url)
+                        for _tk, _tv in _tf.items():
+                            if _tk in STANDARD_FIELDS and _tv and _tk not in _tab_fields:
+                                _tab_fields[_tk] = _tv
+                except Exception:
+                    pass
+
             final_html = page.content()
             final_url = page.url
         except Exception as exc:
@@ -228,8 +246,17 @@ class RuleEngine:
             for k, v in lf.items():
                 if v and not fields.get(k):
                     fields[k] = v
+        # Merge tab-specific fields
+        if "_tab_fields" in dir() or "_tab_fields" in locals():
+            for _tk, _tv in _tab_fields.items():
+                if _tv and not fields.get(_tk):
+                    fields[_tk] = _tv
         fields["trace_website"] = url
         fields["domain"] = domain
+        # Merge fields from tabs
+        for _tk, _tv in _tab_fields.items():
+            if _tv and not fields.get(_tk):
+                fields[_tk] = _tv
         set_cached(domain, url, fields)
         elapsed = round((time.time() - t0) * 1000)
         logger.info("done %s fields=%d %dms", domain, len(fields), elapsed)

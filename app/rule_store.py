@@ -26,7 +26,12 @@ def _save(rules: dict[str, Any]) -> None:
 
 def get_rule(domain: str) -> dict | None:
     rules = _load()
-    return rules.get(domain)
+    if domain in rules:
+        return rules[domain]
+    for saved_domain, rule in rules.items():
+        if saved_domain.endswith("." + domain):
+            return rule
+    return None
 
 
 def set_rule(domain: str, rule: dict) -> None:
